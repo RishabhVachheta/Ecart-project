@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import styles from "./App.module.css";
 import FilterProducts from "./Components/FilterProducts";
@@ -9,10 +9,32 @@ function ProductList() {
   const [searchInput, setSearchInput] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [imagesLoaded, setImagesLoaded] = useState(30);
+  const observer = useRef();
 
   useEffect(() => {
     fetchProductData();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [productData, searchInput, maxPrice, selectedCategory]);
+
+  useEffect(() => {
+    observer.current = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: "20px",
+      threshold: 1.0,
+    });
+    if (observer.current) {
+      observer.current.observe(document.getElementById("observer"));
+    }
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [filteredProducts]);
 
   const fetchProductData = async () => {
     try {
@@ -23,10 +45,6 @@ function ProductList() {
       console.log(error);
     }
   };
-
-  useEffect(() => {
-    applyFilters();
-  }, [productData, searchInput, maxPrice, selectedCategory]);
 
   const applyFilters = () => {
     let filtered = productData.filter((product) => {
@@ -78,6 +96,15 @@ function ProductList() {
     setProductData(sortedProducts);
   };
 
+  const handleObserver = (entries) => {
+    const target = entries[0];
+    if (target.isIntersecting) {
+      const remainingImages = filteredProducts.length - imagesLoaded;
+      const nextBatchSize = Math.min(30, remainingImages);
+      setImagesLoaded((prev) => prev + nextBatchSize);
+    }
+  };
+
   return (
     <div className="blog-contain card text-center">
       <div className={`${styles.BackGround} ${styles.container} card-body`}>
@@ -89,9 +116,10 @@ function ProductList() {
           sortProducts={sortProducts}
         />
         <div className={`row`}>
-          {filteredProducts.map((product) => (
+          {filteredProducts.slice(0, imagesLoaded).map((product, index) => (
             <div
               key={product.id}
+              id={`product-${index}`}
               className={`text-white col-3 position-relative ${styles.detailbox}`}
             >
               <Link to={`/product/${product.id}`}>
@@ -101,18 +129,16 @@ function ProductList() {
                   alt={product.title}
                 />
               </Link>
-              <h2 style={{ color: "black" }}>{product.title}</h2>
-              <p style={{ color: "black" }}>Price: ${product.price}</p>
-              <p style={{ color: "black" }}>Category:{product.category}</p>
+              <h2 style={{ color: "white" }}>{product.title}</h2>
+              <p style={{ color: "white" }}>Price: ${product.price}</p>
+              <p style={{ color: "white" }}>Category: {product.category}</p>
             </div>
           ))}
         </div>
+        <div id="observer"></div>
       </div>
     </div>
   );
 }
 
 export default ProductList;
-
-
-
