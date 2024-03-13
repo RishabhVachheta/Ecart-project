@@ -1,0 +1,20 @@
+.productDetailsContainer {
+  display: flex;
+  background-color: #e3e2df;
+  min-height: 100vh;
+}
+
+.sliderContainer {
+  width: 40%;
+  padding-left: 60px;
+}
+
+.detailsContainer {
+  font-size: 19px;
+  padding: 80px;
+  width: 50%;
+  font-weight: 500;
+}
+.slick-next:before {
+  color: black;
+}
