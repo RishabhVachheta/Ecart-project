@@ -11,6 +11,10 @@ function ProductList() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [imagesLoaded, setImagesLoaded] = useState(30);
   const observer = useRef();
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const listInnerRef = useRef();
+  const pageRef = useRef(1);
 
   useEffect(() => {
     fetchProductData();
@@ -29,6 +33,7 @@ function ProductList() {
     if (observer.current) {
       observer.current.observe(document.getElementById("observer"));
     }
+
     return () => {
       if (observer.current) {
         observer.current.disconnect();
@@ -36,9 +41,19 @@ function ProductList() {
     };
   }, [filteredProducts]);
 
+  const handleObserver = (entries) => {
+    const target = entries[0];
+    if (target.isIntersecting) {
+      const remainingImages = filteredProducts.length - imagesLoaded;
+      const nextBatchSize = Math.min(30, remainingImages);
+      setImagesLoaded((prev) => prev + nextBatchSize);
+    }
+  };
+
   const fetchProductData = async () => {
     try {
-      const response = await fetch("https://dummyjson.com/products?limit=100");
+      const response = await fetch("https://dummyjson.com/products");
+
       const data = await response.json();
       setProductData(data?.products);
     } catch (error) {
@@ -96,12 +111,35 @@ function ProductList() {
     setProductData(sortedProducts);
   };
 
-  const handleObserver = (entries) => {
-    const target = entries[0];
-    if (target.isIntersecting) {
-      const remainingImages = filteredProducts.length - imagesLoaded;
-      const nextBatchSize = Math.min(30, remainingImages);
-      setImagesLoaded((prev) => prev + nextBatchSize);
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  });
+
+  const handleScroll = () => {
+    if (
+      Math.ceil(window.innerHeight + document.documentElement.scrollTop) ===
+      document.documentElement.offsetHeight
+    ) {
+      fetchMoreItems();
+    }
+  };
+
+  const fetchMoreItems = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = pageRef.current + 1;
+      const skip = productData.length;
+      const response = await fetch(
+        `https://dummyjson.com/products?page=${nextPage}&limit=30&skip=${skip}`
+      );
+      const data = await response.json();
+      setProductData((prevProducts) => [...prevProducts, ...data.products]);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
